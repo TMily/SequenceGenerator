@@ -15,25 +15,40 @@ class SequenceGeneratorCommand(sublime_plugin.TextCommand):
         if not self.VerifyFormat(text):
             sublime.status_message("Your input is invalid.")
         else:
-            sublime.status_message("You could set the sequence format to: {start:step} or {start}.")
+            sublime.status_message("You could set the sequence format to: {start:step:mode:case} only first arg can not be omitted.")
     def VerifyFormat(self, text):
         splits = text.replace(":", " ").split()
         length = len(splits)
-        if not 1<=length<=2:
+        if not 1<=length<=4:
             return False
-        for number in splits:
-            try:
-                number = int(number)
-            except:
-                return False
+        for i in range(len(splits)):
+            if i < 2:
+                try:
+                    number = int(splits[i])
+                except:
+                    return False
+            if i >= 2:
+                try:
+                    txt = str(splits[i])
+                except:
+                    return False
 
-        parameter = {'start':1, 'step':1}
+        parameter = {'start':1, 'step':1, 'mode':"n", 'case':"l"}
 
         if length==1:
             parameter['start'] = int(splits[0])
-        else:
+        elif length==2:
             parameter['start'] = int(splits[0])
             parameter['step'] = int(splits[1])
+        elif length==3:
+            parameter['start'] = int(splits[0])
+            parameter['step'] = int(splits[1])
+            parameter['mode'] = str(splits[2])
+        elif length==4:
+            parameter['start'] = int(splits[0])
+            parameter['step'] = int(splits[1])
+            parameter['mode'] = str(splits[2])
+            parameter['case'] = str(splits[3])
 
         return parameter
 
@@ -42,8 +57,11 @@ class GenerateSequenceCommand(sublime_plugin.TextCommand):
         new_sel = []
         for region in self.view.sel():
             self.view.erase(edit, region)
-
-            sequence = str(parameter['start'])
+            if parameter['mode'] == "n":
+                sequence = str(parameter['start'])
+            else:
+                start = int(parameter['start'])
+                sequence = self.int_toletter(start,str(parameter['case']))
             self.view.insert(edit, region.begin(), sequence)
 
             new_sel.append(sublime.Region(region.begin(), region.begin() + len(sequence)))
@@ -55,3 +73,16 @@ class GenerateSequenceCommand(sublime_plugin.TextCommand):
             for r in new_sel:
                 self.view.sel().add(r)
 
+    def int_toletter(self,number,case):
+        result = ""
+        alpha = number // 27
+        remainder = number - (alpha * 26)
+        if case=="l":
+            offset = 96
+        else:
+            offset = 64
+        if alpha > 0:
+            result = chr(alpha + offset)
+        if remainder > 0:
+            result += chr(remainder + offset)
+        return result
